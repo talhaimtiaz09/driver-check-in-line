@@ -4,31 +4,214 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Driver Check-In Line</title>
+<meta name="description" content="Workflow A one-pager: an inbound voice agent that checks truck drivers in and decides on-time or late from public routing APIs.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root { --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --code: #f0f1f3; }
-@media (prefers-color-scheme: dark) { :root { --bg: #0d1117; --fg: #e6edf3; --muted: #9198a1; --code: #1f242c; } }
-body { background: var(--bg); color: var(--fg); font: 16px/1.55 -apple-system, "Segoe UI", Helvetica, Arial, sans-serif; max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
-h1 { font-size: 1.75rem; margin: 0 0 4px; }
-h1 + p { color: var(--muted); margin-top: 0; }
-h2 { font-size: 1.2rem; margin: 28px 0 8px; }
-p { margin: 6px 0; }
-li { margin: 4px 0; }
-li > p { margin: 0; }
-ul:has(input[type=checkbox]) { list-style: none; padding-left: 4px; }
-code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: 0.9em; }
-@media print { body { padding: 0; font-size: 13px; } h2 { margin-top: 16px; } }
+:root {
+  --surface: #ffffff;
+  --surface-2: #f2f2f2;
+  --ink: #070707;
+  --ink-body: #2e2e2e;
+  --muted: #736f6a;
+  --line: #e6e1da;
+  --line-strong: #b8aea4;
+  --accent: #b06a38;
+  --accent-soft: #d5956622;
+  --check: #027a48;
+  --font-body: "Inter", "Suisse Intl", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", "Suisse Intl Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --surface: #12100e;
+    --surface-2: #1b1816;
+    --ink: #fdfcf4;
+    --ink-body: #e4ded5;
+    --muted: #b0a79c;
+    --line: #ece8e31a;
+    --line-strong: #ece8e34d;
+    --accent: #d59566;
+    --accent-soft: #d5956626;
+    --check: #5fa46b;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--surface);
+  color: var(--ink-body);
+  font: 400 16px/1.6 var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+.page { max-width: 820px; margin: 0 auto; padding: 56px 24px 64px; }
+
+.eyebrow, .label, .num, .meta {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.eyebrow { color: var(--accent); margin: 0 0 16px; }
+h1 {
+  color: var(--ink);
+  font-weight: 400;
+  font-size: clamp(2.25rem, 6vw, 3.25rem);
+  line-height: 1.02;
+  letter-spacing: -.03em;
+  margin: 0 0 20px;
+}
+.meta {
+  display: flex; flex-wrap: wrap; gap: 8px 20px;
+  color: var(--muted);
+  padding-bottom: 28px;
+  border-bottom: 1px solid var(--line-strong);
+}
+
+section { padding: 32px 0; border-bottom: 1px solid var(--line); }
+section:last-of-type { border-bottom: 0; }
+.label { color: var(--muted); margin: 0 0 14px; }
+h2 {
+  color: var(--ink);
+  font-weight: 400;
+  font-size: 1.6rem;
+  line-height: 1.15;
+  letter-spacing: -.02em;
+  margin: 0 0 16px;
+}
+p { margin: 0; }
+.lead { font-size: 1.15rem; line-height: 1.6; color: var(--ink-body); max-width: 68ch; }
+strong { color: var(--ink); font-weight: 600; }
+code {
+  font-family: var(--font-mono);
+  font-size: .86em;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 1px 5px;
+  color: var(--ink);
+}
+
+.steps { list-style: none; margin: 0; padding: 0; }
+.steps li {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  gap: 0 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+.steps li:first-child { border-top: 0; padding-top: 4px; }
+.num { color: var(--accent); padding-top: 3px; }
+.step-title { color: var(--ink); font-weight: 600; margin-bottom: 2px; }
+.steps p { color: var(--ink-body); }
+
+.components {
+  list-style: none; margin: 0; padding: 0;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
+.components li {
+  display: grid; grid-template-columns: 20px 1fr; gap: 10px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px 16px;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.components li.wide { grid-column: 1 / -1; }
+.components svg { margin-top: 3px; color: var(--check); }
+.components .name { display: block; color: var(--ink); font-weight: 600; }
+
+.design {
+  border-left: 2px solid var(--accent);
+  background: var(--accent-soft);
+  border-radius: 0 8px 8px 0;
+  padding: 18px 20px;
+  font-size: 1.05rem;
+}
+.design p + p { margin-top: 10px; }
+
+@media (max-width: 600px) {
+  .page { padding: 36px 16px 48px; }
+  .components { grid-template-columns: 1fr; }
+  .steps li { grid-template-columns: 36px 1fr; }
+}
+@media print {
+  @page { size: A4; margin: 10mm 12mm; }
+  :root { --surface: #fff; --surface-2: #f5f5f5; --ink: #070707; --ink-body: #2e2e2e; --muted: #736f6a; --line: #e6e1da; --line-strong: #b8aea4; --accent: #b06a38; --accent-soft: #d595661a; --check: #027a48; }
+  body { font-size: 10.5px; line-height: 1.4; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { padding: 0; max-width: none; }
+  .eyebrow, .label, .num, .meta { font-size: 9px; }
+  .eyebrow { margin-bottom: 6px; }
+  h1 { font-size: 24px; margin-bottom: 8px; }
+  .meta { padding-bottom: 8px; }
+  section { padding: 8px 0; break-inside: avoid; }
+  .label { margin-bottom: 6px; }
+  .lead { font-size: 11.5px; line-height: 1.45; max-width: none; }
+  .steps li { padding: 4px 0; grid-template-columns: 30px 1fr; }
+  .components { gap: 5px; }
+  .components li { padding: 6px 9px; font-size: 10px; line-height: 1.35; gap: 7px; }
+  .components svg { width: 12px; height: 12px; margin-top: 1px; }
+  .design { padding: 8px 12px; font-size: 11px; }
+  .design p + p { margin-top: 4px; }
+}
 </style>
 </head>
 <body>
-<h1 id="workflow-a-driver-check-in-line">Workflow A: Driver Check-In Line</h1>
-<p><time data-atom="date" datetime="2026-10-29">2026-10-29</time> · Talha Imtiaz</p>
-<h2 id="use-case">Use case</h2>
-<p>Truck drivers call their broker several times a day to report where they are, and dispatchers spend hours on these calls. Sam, the voice agent on the Ridgeline Freight check-in line, looks up the load and works out the remaining drive time from public map APIs. It then tells the driver whether they will make the delivery appointment and logs the check-in, with a priority and a draft customer notice, for dispatch.</p>
-<h2 id="high-level-flow">High-level flow</h2>
-<ol><li><p><strong>Web call:</strong> the driver calls in. Sam asks for the load number and reads it back digit by digit to confirm it.</p></li><li><p><strong><code>get_load</code> tool:</strong> looks up the load in a mock TMS and returns the delivery address and appointment time. If the load isn&#39;t found, Sam asks once more, then promises a dispatcher callback.</p></li><li><p><strong><code>drive_time</code> tool:</strong> geocodes the driver&#39;s city with Open-Meteo, gets the remaining drive time from OSRM, and a code step compares it with the time left before the appointment: <strong>on time</strong>, <strong>at risk</strong> (under 60 min to spare) or <strong>late</strong>.</p></li><li><p><strong>The API result steers the call:</strong> if the driver is on track, Sam reads back the ETA. If late, Sam asks for the reason and a new ETA. If the city can&#39;t be found or routing fails, Sam asks for the driver&#39;s own ETA and never guesses.</p></li><li><p><strong>After the call:</strong> Extract pulls the load number, driver, location, ETA and delay reason. Classify labels the call on time, at risk, late, breakdown, accident or unverified. Generate writes a priority (P1–P4), the dispatcher&#39;s next action and a customer notice.</p></li><li><p><strong>Write-back:</strong> one row per call goes to the <code>load_check_ins</code> table in Twin, with the extracted fields, the system&#39;s verdict, the classification and the ops notes.</p></li></ol>
-<h2 id="components-used">Components used</h2>
-<ul><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Inbound Voice Agent:</strong> Sam, a single fixed voice, with a transcriber hint for 5-digit load numbers</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Web call trigger only:</strong> no phone number bought, no outbound calls</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>2+ tool calls:</strong> <code>get_load</code> and <code>drive_time</code></p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Public API call, result used in the flow:</strong> Open-Meteo geocoding and OSRM routing; their drive time decides on time, at risk or late, and that decides what Sam says next</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>AI node:</strong> Generate, which writes the priority, next action and customer notice</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Classify node:</strong> load status (6 classes)</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Extract node:</strong> check-in details (5 fields)</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Write-back node:</strong> Write to Twin, <code>load_check_ins</code> table</p></li><li data-checked="true"><p><input type="checkbox" disabled checked> <strong>Code steps (Python Sandbox):</strong> mock TMS lookup, the on-time/late decision, and formatting the tool results for the agent</p></li></ul>
-<h2 id="design">Design</h2>
-<p>The on-time or late verdict comes from code using the routing API&#39;s drive time, not from the LLM, so the same load and city always give the same answer. Sam may only state times a tool returned, and every failure has a path that falls back to the driver&#39;s own ETA or a dispatcher callback, so the agent never invents a number.</p>
+<main class="page">
+
+  <header>
+    <p class="eyebrow">Workflow A · One-pager</p>
+    <h1>Driver Check-In Line</h1>
+    <div class="meta">
+      <span>Talha Imtiaz</span>
+      <span>2026-10-29</span>
+      <span>Web call · Inbound voice agent</span>
+    </div>
+  </header>
+
+  <section>
+    <p class="label">01 · Use case</p>
+    <p class="lead">Truck drivers call their broker several times a day to report where they are, and dispatchers spend hours on these calls. Sam, the voice agent on the Ridgeline Freight check-in line, looks up the load and works out the remaining drive time from public map APIs. It then tells the driver whether they will make the delivery appointment and logs the check-in, with a priority and a draft customer notice, for dispatch.</p>
+  </section>
+
+  <section>
+    <p class="label">02 · High-level flow</p>
+    <ol class="steps">
+      <li><span class="num">01</span><div><div class="step-title">Web call</div><p>The driver calls in. Sam asks for the load number and reads it back digit by digit to confirm it.</p></div></li>
+      <li><span class="num">02</span><div><div class="step-title"><code>get_load</code> tool</div><p>Looks up the load in a mock TMS and returns the delivery address and appointment time. If the load isn't found, Sam asks once more, then promises a dispatcher callback.</p></div></li>
+      <li><span class="num">03</span><div><div class="step-title"><code>drive_time</code> tool</div><p>Geocodes the driver's city with Open-Meteo, gets the remaining drive time from OSRM, and a code step compares it with the time left before the appointment: <strong>on time</strong>, <strong>at risk</strong> (under 60 min to spare) or <strong>late</strong>.</p></div></li>
+      <li><span class="num">04</span><div><div class="step-title">The API result steers the call</div><p>If the driver is on track, Sam reads back the ETA. If late, Sam asks for the reason and a new ETA. If the city can't be found or routing fails, Sam asks for the driver's own ETA and never guesses.</p></div></li>
+      <li><span class="num">05</span><div><div class="step-title">After the call</div><p>Extract pulls the load number, driver, location, ETA and delay reason. Classify labels the call on time, at risk, late, breakdown, accident or unverified. Generate writes a priority (P1–P4), the dispatcher's next action and a customer notice.</p></div></li>
+      <li><span class="num">06</span><div><div class="step-title">Write-back</div><p>One row per call goes to the <code>load_check_ins</code> table in Twin, with the extracted fields, the system's verdict, the classification and the ops notes.</p></div></li>
+    </ol>
+  </section>
+
+  <section>
+    <p class="label">03 · Components used</p>
+    <ul class="components">
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Inbound Voice Agent</span>Sam, a single fixed voice, with a transcriber hint for 5-digit load numbers</div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Web call trigger only</span>No phone number bought, no outbound calls</div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">2+ tool calls</span><code>get_load</code> and <code>drive_time</code></div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">AI node</span>Generate, which writes the priority, next action and customer notice</div></li>
+      <li class="wide"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Public API call, result used in the flow</span>Open-Meteo geocoding and OSRM routing; their drive time decides on time, at risk or late, and that decides what Sam says next</div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Classify node</span>Load status (6 classes)</div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Extract node</span>Check-in details (5 fields)</div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Write-back node</span>Write to Twin, <code>load_check_ins</code> table</div></li>
+      <li><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M3 8.5l3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><span class="name">Code steps (Python Sandbox)</span>Mock TMS lookup, the on-time/late decision, and formatting the tool results for the agent</div></li>
+    </ul>
+  </section>
+
+  <section>
+    <p class="label">04 · Design</p>
+    <div class="design">
+      <p>The on-time or late verdict comes from code using the routing API's drive time, not from the LLM, so the same load and city always give the same answer.</p>
+      <p>Sam may only state times a tool returned, and every failure has a path that falls back to the driver's own ETA or a dispatcher callback, so the agent never invents a number.</p>
+    </div>
+  </section>
+
+</main>
 </body>
 </html>
